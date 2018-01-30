@@ -10,3 +10,7 @@ go get -u github.com/google/uuid
 ```
 go build
 ```
+## Test
+```
+wget http://localhost/mock
+```
