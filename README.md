@@ -1,7 +1,12 @@
 # ApiMock
-Install
+## Install
+```
 go get -u github.com/gorilla/mux
+```
+```
 go get -u github.com/google/uuid
-
-Build 
+```
+## Build 
+```
 go build
+```
