@@ -7,6 +7,7 @@ import (
     "net/http"
 	"github.com/gorilla/mux"
 	"github.com/google/uuid"
+	"github.com/magiconair/properties"
 )
 
 type Mock struct {
@@ -32,8 +33,9 @@ func GetMock(w http.ResponseWriter, r *http.Request) {
 
 // our main function
 func main() {
+	p := properties.MustLoadFile("ApiMock.properties", properties.UTF8)
 	router := mux.NewRouter()
 	router.HandleFunc("/mock", GetMock).Methods("GET")
-	log.Fatal(http.ListenAndServe(":80", router))
+	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"), router))
 	return
 }
