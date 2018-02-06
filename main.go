@@ -4,8 +4,9 @@ import (
 	"strings"
     "encoding/json"
     "log"
-    "net/http"
-	"github.com/gorilla/mux"
+	"net/http"
+	"time"
+	"strconv"
 	"github.com/google/uuid"
 	"github.com/magiconair/properties"
 )
@@ -21,21 +22,31 @@ type HttpHeader struct {
 }
 
 func GetMock(w http.ResponseWriter, r *http.Request) {
-	var head []HttpHeader
-	for key, value := range r.Header {		
-		head = append(head, HttpHeader{Value: strings.Join([]string{key, strings.Join(value," ")}, ":")})
+	if r.Method == "GET" {
+		var head []HttpHeader
+		delay := r.URL.Query().Get("delay")
+		i, err := strconv.Atoi(delay)
+		if err == nil {	
+			time.Sleep(time.Duration(i) * time.Millisecond)
+		}
+		for key, value := range r.Header {		
+			head = append(head, HttpHeader{Value: strings.Join([]string{key, strings.Join(value," ")}, ":")})
+		}
+		var mock Mock = Mock{UUID: uuid.New().String(), Message: "Hello world !", Headers: head}
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)	
+		json.NewEncoder(w).Encode(mock)
+	} else {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusMethodNotAllowed)		
 	}
-	var mock Mock = Mock{UUID: uuid.New().String(), Message: "Hello world !", Headers: head}
-	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)	
-    json.NewEncoder(w).Encode(mock)
 }
 
-// our main function
 func main() {
 	p := properties.MustLoadFile("ApiMock.properties", properties.UTF8)
-	router := mux.NewRouter()
-	router.HandleFunc("/mock", GetMock).Methods("GET")
-	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"), router))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/mock", GetMock)
+	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"),mux))
 	return
+	
 }
