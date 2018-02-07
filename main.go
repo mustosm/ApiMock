@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
     "encoding/json"
     "log"
@@ -29,10 +30,27 @@ func GetMock(w http.ResponseWriter, r *http.Request) {
 		if err == nil {	
 			time.Sleep(time.Duration(i) * time.Millisecond)
 		}
+		fields := strings.Split(r.URL.Query().Get("fields"), ",")
+		fmt.Println(len(fields))
 		for key, value := range r.Header {		
 			head = append(head, HttpHeader{Value: strings.Join([]string{key, strings.Join(value," ")}, ":")})
 		}
-		var mock Mock = Mock{UUID: uuid.New().String(), Message: "Hello world !", Headers: head}
+		var mock Mock
+		if len(fields) > 0 {
+			for _,f := range fields {
+				if (f == "UUID") {
+					mock.UUID = uuid.New().String()
+				}
+				if (f == "Message") {
+					mock.Message = "Hello world !"
+				}
+				if (f == "Headers") {
+					mock.Headers = head
+				} 
+			}
+		} else {
+			mock = Mock{UUID: uuid.New().String(), Message: "Hello world !", Headers: head}
+		}
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)	
 		json.NewEncoder(w).Encode(mock)
@@ -48,5 +66,5 @@ func main() {
 	mux.HandleFunc("/mock", GetMock)
 	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"),mux))
 	return
-	
+
 }
