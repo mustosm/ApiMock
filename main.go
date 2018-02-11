@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"strings"
     "encoding/json"
@@ -8,8 +9,15 @@ import (
 	"net/http"
 	"time"
 	"strconv"
+	"crypto/x509"
+	"encoding/pem"
+	"io/ioutil"
 	"github.com/google/uuid"
 	"github.com/magiconair/properties"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/handlers"
+	"github.com/auth0-community/auth0"
+	jose "gopkg.in/square/go-jose.v2"
 )
 
 type Mock struct {
@@ -23,48 +31,92 @@ type HttpHeader struct {
 }
 
 func GetMock(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		var head []HttpHeader
+	var head []HttpHeader
 		delay := r.URL.Query().Get("delay")
 		i, err := strconv.Atoi(delay)
 		if err == nil {	
 			time.Sleep(time.Duration(i) * time.Millisecond)
 		}
-		fields := strings.Split(r.URL.Query().Get("fields"), ",")
-		fmt.Println(len(fields))
+		
 		for key, value := range r.Header {		
 			head = append(head, HttpHeader{Value: strings.Join([]string{key, strings.Join(value," ")}, ":")})
 		}
-		var mock Mock
-		if len(fields) > 0 {
-			for _,f := range fields {
-				if (f == "UUID") {
-					mock.UUID = uuid.New().String()
-				}
-				if (f == "Message") {
-					mock.Message = "Hello world !"
-				}
-				if (f == "Headers") {
-					mock.Headers = head
-				} 
-			}
-		} else {
-			mock = Mock{UUID: uuid.New().String(), Message: "Hello world !", Headers: head}
-		}
+		var mock Mock = Mock{UUID: uuid.New().String(), Message: "Hello world !", Headers: head}
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)	
 		json.NewEncoder(w).Encode(mock)
-	} else {
-		w.Header().Add("Content-Type", "application/json")
-		w.WriteHeader(http.StatusMethodNotAllowed)		
+	
+}
+
+func GetStatus(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("API is up and running"))
+}
+
+func LoadPublicKey(data []byte) (interface{}, error) {
+	input := data
+
+	block, _ := pem.Decode(data)
+	if block != nil {
+		input = block.Bytes
 	}
+
+	// Try to load SubjectPublicKeyInfo
+	pub, err0 := x509.ParsePKIXPublicKey(input)
+	if err0 == nil {
+		return pub, nil
+	}
+
+	cert, err1 := x509.ParseCertificate(input)
+	if err1 == nil {
+		return cert.PublicKey, nil
+	}
+
+	return nil, fmt.Errorf("square/go-jose: parse error, got '%s' and '%s'", err0, err1)
+}
+
+/* Set up a global string for our secret */
+var mySigningKey = []byte("secret")
+var validator *auth0.JWTValidator
+
+func authMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        //Creates a configuration with the Auth0 information
+		data, err := ioutil.ReadFile("mustosm.pem")
+		if err != nil {
+			panic("Impossible to read key form disk")
+		}
+
+		secret, err := LoadPublicKey(data)
+		if err != nil {
+			panic("Invalid provided key")
+		}
+		audience := []string{"https://api.mustosm.io/v1/myFirstAPI"}
+		secretProvider := auth0.NewKeyProvider(secret)
+		configuration := auth0.NewConfiguration(secretProvider, audience, "https://mustosm.eu.auth0.com/", jose.RS256)
+		validator = auth0.NewValidator(configuration)
+
+        token, err := validator.ValidateRequest(r)
+
+        if err != nil {
+            fmt.Println(err)
+            fmt.Println("Token is not valid:", token)
+            w.WriteHeader(http.StatusUnauthorized)
+            w.Write([]byte("Unauthorized"))
+        } else {
+            next.ServeHTTP(w, r)
+		}
+		
+    })
 }
 
 func main() {
 	p := properties.MustLoadFile("ApiMock.properties", properties.UTF8)
-	mux := http.NewServeMux()
-	mux.HandleFunc("/mock", GetMock)
-	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"),mux))
+	r := mux.NewRouter()
+		
+	GetMockHandler := http.HandlerFunc(GetMock)
+	r.Handle("/mock", authMiddleware(GetMockHandler)).Methods("GET")
+	r.HandleFunc("/status", GetStatus).Methods("GET")
+	//r.HandleFunc("/get-token", GetToken).Methods("GET")
+	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"),handlers.LoggingHandler(os.Stdout, r)))
 	return
-
 }
