@@ -34,7 +34,7 @@
             {
               "name": "delay",
               "in": "query",
-              "description": "Delay in millisecond after receive a response",
+              "description": "sleep duration in milliseconds before response",
               "required": false,
               "type": "string"
             }
