@@ -1,4 +1,7 @@
 # ApiMock
+```
+Simple Mock API developed in GO
+```
 ## Install
 ```
 go get -u github.com/google/uuid
@@ -10,7 +13,7 @@ go build
 ## Test
 Request :
 ```
-wget http://localhost/mock
+curl http://localhost/mock
 ```
 Query :
 ```
