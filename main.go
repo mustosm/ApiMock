@@ -1,10 +1,7 @@
 package main
 
 import (
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -50,28 +47,6 @@ func GetStatus(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("API is up and running"))
 }
 
-func LoadPublicKey(data []byte) (interface{}, error) {
-	input := data
-
-	block, _ := pem.Decode(data)
-	if block != nil {
-		input = block.Bytes
-	}
-
-	// Try to load SubjectPublicKeyInfo
-	pub, err0 := x509.ParsePKIXPublicKey(input)
-	if err0 == nil {
-		return pub, nil
-	}
-
-	cert, err1 := x509.ParseCertificate(input)
-	if err1 == nil {
-		return cert.PublicKey, nil
-	}
-
-	return nil, fmt.Errorf("square/go-jose: parse error, got '%s' and '%s'", err0, err1)
-}
-
 func main() {
 	p := properties.MustLoadFile("ApiMock.properties", properties.UTF8)
 	r := mux.NewRouter()
@@ -79,7 +54,6 @@ func main() {
 	GetMockHandler := http.HandlerFunc(GetMock)
 	r.Handle("/mock", GetMockHandler).Methods("GET")
 	r.HandleFunc("/status", GetStatus).Methods("GET")
-	//r.HandleFunc("/get-token", GetToken).Methods("GET")
 	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"), handlers.LoggingHandler(os.Stdout, r)))
 	return
 }
