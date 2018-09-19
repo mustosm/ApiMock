@@ -9,7 +9,7 @@
         "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
       }
     },
-    "basePath": "/v1",
+    "host": "localhost:8080",
     "tags": [
       {
         "name": "mock",
@@ -17,7 +17,7 @@
       }
     ],
     "schemes": [
-      "https"
+      "http"
     ],
     "paths": {
       "/mock": {

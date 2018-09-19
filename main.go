@@ -39,7 +39,11 @@ func GetMock(w http.ResponseWriter, r *http.Request) {
 	var mock Mock = Mock{UUID: uuid.New().String(), Message: "Hello world !", Headers: head}
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(mock)
+	encoderr := json.NewEncoder(w).Encode(mock)
+	if encoderr != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w)
+	}
 
 }
 
