@@ -48,7 +48,13 @@ func GetMock(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStatus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("API is up and running"))
+}
+
+func GetSwagger (w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	http.ServeFile(w,r,"apimock-swagger.json")
 }
 
 func main() {
@@ -57,7 +63,8 @@ func main() {
 
 	GetMockHandler := http.HandlerFunc(GetMock)
 	r.Handle("/mock", GetMockHandler).Methods("GET")
-	r.HandleFunc("/status", GetStatus).Methods("GET")
+	r.HandleFunc("/health", GetStatus).Methods("GET")
+	r.HandleFunc("/swagger", GetSwagger).Methods("GET")
 	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"), handlers.LoggingHandler(os.Stdout, r)))
 	return
 }
