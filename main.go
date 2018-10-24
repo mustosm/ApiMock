@@ -60,9 +60,8 @@ func GetSwagger (w http.ResponseWriter, r *http.Request) {
 func main() {
 	p := properties.MustLoadFile("ApiMock.properties", properties.UTF8)
 	r := mux.NewRouter()
-
-	GetMockHandler := http.HandlerFunc(GetMock)
-	r.Handle("/mock", GetMockHandler).Methods("GET")
+	
+	r.HandleFunc("/mock", GetMock).Methods("GET")
 	r.HandleFunc("/health", GetStatus).Methods("GET")
 	r.HandleFunc("/swagger", GetSwagger).Methods("GET")
 	log.Fatal(http.ListenAndServeTLS(":"+p.MustGetString("port"),p.MustGetString("certificate"),p.MustGetString("key"),handlers.LoggingHandler(os.Stdout, r)))
