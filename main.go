@@ -65,6 +65,6 @@ func main() {
 	r.Handle("/mock", GetMockHandler).Methods("GET")
 	r.HandleFunc("/health", GetStatus).Methods("GET")
 	r.HandleFunc("/swagger", GetSwagger).Methods("GET")
-	log.Fatal(http.ListenAndServe(":"+p.MustGetString("port"), handlers.LoggingHandler(os.Stdout, r)))
+	log.Fatal(http.ListenAndServeTLS(":"+p.MustGetString("port"),p.MustGetString("certificate"),p.MustGetString("key"),handlers.LoggingHandler(os.Stdout, r)))
 	return
 }
